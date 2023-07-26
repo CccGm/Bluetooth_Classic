@@ -18,7 +18,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ToastAndroid
 } from 'react-native';
 import {Buffer} from 'buffer';
@@ -133,7 +132,7 @@ export default class ConnectionScreen extends React.Component {
     this.uninitializeRead();
   }
 
-  initializeRead() {
+  async initializeRead() {
     this.disconnectSubscription = RNBluetoothClassic.onDeviceDisconnected(() =>
       this.disconnect(true)
     );
@@ -141,9 +140,18 @@ export default class ConnectionScreen extends React.Component {
     if (this.state.polling) {
       this.readInterval = setInterval(() => this.performRead(), 5000);
     } else {
-      this.readSubscription = this.props.device.onDataReceived(data =>
-        this.onReceivedData(data)
-      );
+      try {
+        const message = await this.props.device.read();
+        //this.setState({data: message.data});
+        console.log(message, '+++ data recive ');
+        ToastAndroid.show(message.data, ToastAndroid.CENTER, ToastAndroid.LONG);
+      } catch (error) {
+        console.log(error);
+      }
+      this.readSubscription = this.props.device.onDataReceived(data => {
+        console.log('+++++++++', data, 'recived data ');
+        this.onReceivedData(data);
+      });
     }
   }
 
@@ -167,7 +175,7 @@ export default class ConnectionScreen extends React.Component {
 
       if (available > 0) {
         for (let i = 0; i < available; i++) {
-          console.log(`reading ${i}th time`);
+          console.log(`+++ reading ${i}th time`);
           let data = await this.props.device.read();
 
           console.log(`Read data ${data}`);
@@ -187,6 +195,7 @@ export default class ConnectionScreen extends React.Component {
    * @param {ReadEvent} event
    */
   async onReceivedData(event) {
+    console.log(event, '+++ data recive ');
     event.timestamp = new Date();
     this.addData({
       ...event,
@@ -196,8 +205,8 @@ export default class ConnectionScreen extends React.Component {
   }
 
   async addData(message) {
-    // this.setState({data: [message, ...this.state.data]});
-    this.setState({data: [message]});
+    this.setState({data: [message, ...this.state.data]});
+    console.log(message, 'data add +++');
   }
 
   /**
@@ -206,8 +215,15 @@ export default class ConnectionScreen extends React.Component {
    */
   async sendData() {
     try {
-      console.log(`Attempting to send data ${this.state.text}`);
+      console.log(
+        `Attempting to send data ${this.state.text} + ${
+          this.props.device.address
+        }`
+      );
       let message = this.state.text + '\n';
+      // console.log(message, 'data send \n +++');
+      // let mesg = this.state.text + 'hi' + '\n';
+      // await RNBluetoothClassic.write(this.props.device.address, mesg);
       await RNBluetoothClassic.writeToDevice(
         this.props.device.address,
         message
@@ -219,18 +235,18 @@ export default class ConnectionScreen extends React.Component {
         type: 'sent'
       });
 
-      // let data = Buffer.alloc(10, 0xef);
-      // await this.props.device.write(data);
+      let data = Buffer.alloc(10, 0xef);
+      await this.props.device.write(data);
 
-      // this.addData({
-      //   timestamp: new Date(),
-      //   data: `Byte array: ${data.toString()}`,
-      //   type: 'sent'
-      // });
+      this.addData({
+        timestamp: new Date(),
+        data: `Byte array: ${data.toString()}`,
+        type: 'sent'
+      });
 
       this.setState({text: undefined});
     } catch (error) {
-      console.log(error);
+      console.log('+++ tack error', error);
     }
   }
 

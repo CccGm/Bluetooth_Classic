@@ -124,6 +124,7 @@ export default class DeviceListScreen extends React.Component {
 
     try {
       let device = await RNBluetoothClassic.accept({delimiter: '\r'});
+      console.log('+++ device accept request', device);
       if (device) {
         this.props.selectDevice(device);
       }
@@ -131,6 +132,7 @@ export default class DeviceListScreen extends React.Component {
       // If we're not in an accepting state, then chances are we actually
       // requested the cancellation.  This could be managed on the native
       // side but for now this gives more options.
+      console.log('+++ connectino faile', error);
       if (!this.state.accepting) {
         Toast.show({
           text: 'Attempt to accept connection failed.',
