@@ -10,8 +10,15 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-community/toolbar-android": "^0.2.1",
+    "buffer": "^6.0.3",
+    "deprecated-react-native-prop-types": "^2.2.0",
+    "i": "^0.3.7",
+    "native-base": "^2.13.14",
+    "npm": "^9.8.1",
     "react": "18.2.0",
-    "react-native": "0.72.1"
+    "react-native": "0.72.1",
+    "react-native-bluetooth-classic": "^1.60.0-rc.29"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
