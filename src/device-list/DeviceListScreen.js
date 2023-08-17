@@ -125,7 +125,7 @@ export default class DeviceListScreen extends React.Component {
     this.setState({accepting: true});
 
     try {
-      let device = await RNBluetoothClassic.accept({delimiter: ''});
+      let device = await RNBluetoothClassic.accept({delimiter: '\n'});
       console.log('+++ device accept request', device);
       if (device) {
         this.props.selectDevice(device);

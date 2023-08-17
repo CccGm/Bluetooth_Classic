@@ -12,6 +12,7 @@ import {
   Subtitle,
   Right,
 } from 'native-base';
+
 import {
   FlatList,
   View,
@@ -20,6 +21,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {Buffer} from 'buffer';
+import RNFS from 'react-native-fs';
+import Sound from 'react-native-sound';
+import Permissions from 'react-native-permissions';
+import AudioRecord from 'react-native-audio-record';
 
 /**
  * Manages a selected device connection.  The selected Device should
@@ -28,7 +33,7 @@ import {Buffer} from 'buffer';
  *
  * @author kendavidson
  */
-export default class ConnectionScreen extends React.Component {
+export default class ConnectionScreenAudio extends React.Component {
   constructor(props) {
     super(props);
 
@@ -42,6 +47,7 @@ export default class ConnectionScreen extends React.Component {
       },
     };
   }
+
   /**
    * Removes the current subscriptions and disconnects the specified
    * device.  It could be possible to maintain the connection across
@@ -202,9 +208,9 @@ export default class ConnectionScreen extends React.Component {
    * Attempts to send data to the connected Device.  The input text is
    * padded with a NEWLINE (which is required for most commands)
    */
-  async sendData() {
+  async sendData(MSG) {
     try {
-      console.log(`Attempting to send data ${this.state.text}`);
+      console.log(`Attempting to send data ${MSG}`);
       let message = this.state.text + '\n';
       await RNBluetoothClassic.writeToDevice(
         this.props.device.address,
@@ -214,6 +220,15 @@ export default class ConnectionScreen extends React.Component {
       this.addData({
         timestamp: new Date(),
         data: this.state.text,
+        type: 'sent',
+      });
+
+      let data = Buffer.alloc(10, 0xef);
+      await this.props.device.write(data);
+
+      this.addData({
+        timestamp: new Date(),
+        data: `Byte array: ${data.toString()}`,
         type: 'sent',
       });
 
@@ -231,11 +246,134 @@ export default class ConnectionScreen extends React.Component {
     }
   }
 
+  //// -------
+  sound = null;
+  state = {
+    audioFile: '',
+    recording: false,
+    loaded: false,
+    paused: true,
+    base64: '',
+  };
+
+  async componentDidMount() {
+    await this.checkPermission();
+
+    const options = {
+      sampleRate: 16000,
+      channels: 1,
+      bitsPerSample: 16,
+      wavFile: 'test.wav',
+    };
+
+    AudioRecord.init(options);
+
+    AudioRecord.on();
+  }
+
+  checkPermission = async () => {
+    const p = await Permissions.check('microphone');
+    console.log('permission check', p);
+    if (p === 'authorized') return;
+    return this.requestPermission();
+  };
+
+  requestPermission = async () => {
+    const p = await Permissions.request('microphone');
+    console.log('permission request', p);
+  };
+
+  start = () => {
+    console.log('start record');
+    this.setState({audioFile: '', recording: true, loaded: false});
+    AudioRecord.start();
+  };
+
+  stop = async () => {
+    if (!this.state.recording) return;
+    console.log('stop record');
+    let audioFile = await AudioRecord.stop();
+    console.log('audioFile', audioFile);
+    this.setState({audioFile, recording: false});
+  };
+
+  load = () => {
+    let filePath = '/data/user/0/com.audio_record/files/test1.wav';
+    return new Promise((resolve, reject) => {
+      if (!this.state.audioFile) {
+        return reject('file path is empty');
+      }
+
+      this.sound = new Sound(filePath, '', error => {
+        if (error) {
+          console.log('failed to load the file', error);
+          return reject(error);
+        }
+        this.setState({loaded: true});
+        return resolve();
+      });
+    });
+  };
+
+  play = async () => {
+    if (!this.state.loaded) {
+      try {
+        await this.load();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    this.setState({paused: false});
+    Sound.setCategory('Playback');
+
+    this.sound.play(success => {
+      if (success) {
+        console.log('successfully finished playing');
+      } else {
+        console.log('playback failed due to audio decoding errors');
+      }
+      this.setState({paused: true});
+      // this.sound.release();
+    });
+  };
+
+  pause = () => {
+    this.sound.pause();
+    this.setState({paused: true});
+  };
+
+  convert = () => {
+    let filePath = '/data/user/0/com.audio_record/files/test.wav';
+    RNFS.readFile(filePath, 'base64')
+      .then(res => {
+        console.log(res, '=< convertd');
+        console.log('Converted to base64');
+        this.sendData(res);
+      })
+      .catch(err => {
+        console.log(err.message, err.code, '<= error');
+      });
+  };
+
+  revrse = () => {
+    let filePath = '/data/user/0/com.audio_record/files/test1.wav';
+    // console.log(this.state.base64, '<= data');
+    RNFS.writeFile(filePath, this.state.base64, 'base64')
+      .then(res => {
+        console.log('revrse to wav');
+        // this.setState({base64: res});
+      })
+      .catch(err => {
+        console.log(err.message, err.code, '<= error to reverse');
+      });
+  };
+
   render() {
     let toggleIcon = this.state.connection
       ? 'radio-button-on'
       : 'radio-button-off';
-
+    const {recording, paused, audioFile} = this.state;
     return (
       <Container>
         <Header iosBarStyle="light-content">
@@ -279,6 +417,43 @@ export default class ConnectionScreen extends React.Component {
             onSend={() => this.sendData()}
             disabled={!this.state.connection}
           />
+          <View>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={styles.container}
+                onPress={this.start}
+                disabled={recording}>
+                <Text>Record</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.container}
+                onPress={this.stop}
+                disabled={!recording}>
+                <Text>Stop</Text>
+              </TouchableOpacity>
+              {paused ? (
+                <TouchableOpacity
+                  style={styles.container}
+                  onPress={this.play}
+                  disabled={!audioFile}>
+                  <Text>Play</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.container}
+                  onPress={this.pause}
+                  disabled={!audioFile}>
+                  <Text>Pause</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.container} onPress={this.convert}>
+                <Text>Send Data</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.container} onPress={this.revrse}>
+                <Text>Revrse</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Container>
     );
@@ -342,5 +517,15 @@ const styles = StyleSheet.create({
   inputAreaSendButton: {
     justifyContent: 'center',
     flexShrink: 1,
+  },
+  container: {
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
   },
 });

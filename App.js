@@ -4,7 +4,9 @@ import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import getTheme from './native-base-theme/components';
 import platform from './native-base-theme/variables/platform';
 import ConnectionScreen from './src/connection/ConnectionScreen';
+import ConnectionScreenAudio from './src/connection/ConnectionScreenAudio';
 import DeviceListScreen from './src/device-list/DeviceListScreen';
+import ConnectionScreen2 from './src/connection/Connection2';
 
 export default class App extends React.Component {
   constructor(props) {
@@ -110,7 +112,15 @@ export default class App extends React.Component {
               selectDevice={this.selectDevice}
             />
           ) : (
-            <ConnectionScreen
+            // <ConnectionScreen
+            //   device={this.state.device}
+            //   onBack={() => this.setState({device: undefined})}
+            // />
+            // <ConnectionScreenAudio
+            //   device={this.state.device}
+            //   onBack={() => this.setState({device: undefined})}
+            // />
+            <ConnectionScreen2
               device={this.state.device}
               onBack={() => this.setState({device: undefined})}
             />
