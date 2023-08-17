@@ -4,6 +4,9 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 >**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
 
+>## Add Or Changes :
+ First `npm install` then after copying the file give in the `extra add in node` folder, file copy and add in `node_module`
+
 ## Step 1: Start the Metro Server
 
 First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
@@ -67,6 +70,11 @@ You've successfully run and modified your React Native App. :partying_face:
 # Troubleshooting
 
 If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+
+# Reference
+
+``https://github.com/rahulp9538/BluetoothClassicExample-copy.git``
+``https://github.com/kenjdavidson/react-native-bluetooth-classic.git``
 
 # Learn More
 
